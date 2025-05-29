@@ -4,7 +4,7 @@
 #          to control a PC without mouse & keyboard.
 # Author: Ashley Beebakee (https://github.com/OmniAshley)
 # Date Created: 17/05/2025
-# Last Updated: 21/05/2025
+# Last Updated: 29/05/2025
 # Python Version: 3.10.6
 #----------------------------------------------------------#
 
@@ -18,6 +18,13 @@ import os
 import cv2
 import time
 
+# Additional libraries for mouse & keyboard manipulation
+import pyautogui
+import numpy as np
+import math
+
+screen_width, screen_height = pyautogui.size()
+
 """
 N.B. The model was trained on approx. 30K real-world images
 It has 21 landmarks as follows:
@@ -27,8 +34,12 @@ It has 21 landmarks as follows:
 3. THUMB_IP   7. INDEX_FINGER_DIP  11. MIDDLE_FINGER_DIP  15.RING_FINGER_DIP  19. PINKY_DIP
 4. THUMB_TIP  8. INDEX_FINGER_TIP  12. MIDDLE_FINGER_TIP  16.RING_FINGER_TIP  20. PINKY_TIP
 """
+
 # Define global variables
 hand_landmarks_list = []
+last_position = None
+last_click_time = 0
+click_cooldown = 0.6  # seconds (unit)
 
 # Define hand connections
 HAND_CONNECTIONS = [
@@ -49,6 +60,10 @@ GestureRecognizer = mp.tasks.vision.GestureRecognizer
 GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
+
+# Create mathematical logic to recognise a pinch between the index finger and thumb 
+def euclidean_distance(x1, y1, x2, y2):
+    return math.hypot(x2 - x1, y2 - y1)
 
 # Create a gesture recognizer instance with the live stream mode:
 def print_result(result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int): # type: ignore
@@ -74,6 +89,11 @@ options = GestureRecognizerOptions(
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+#cap.set(cv2.CAP_PROP_FPS, 60)
+
+# Gets webcam resolution
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # Warm-up frames to stabilise webcam
 for _ in range(5):
@@ -106,6 +126,56 @@ with GestureRecognizer.create_from_options(options) as recognizer:
 
         # Send image into recognizer
         recognizer.recognize_async(mp_image, timestamp_ms)
+
+        # Define the frame size
+        image_height, image_width, _ = frame.shape
+
+        if hand_landmarks_list:
+            landmarks = hand_landmarks_list[0]  # Assume first hand
+
+            # Get normalised landmark values
+            index_tip = landmarks[8]
+            thumb_tip = landmarks[4]
+
+            # Flip x-axis for mirrored camera
+            x_index = 1.0 - index_tip.x
+            y_index = index_tip.y
+            x_thumb = 1.0 - thumb_tip.x
+            y_thumb = thumb_tip.y
+
+            # Convert to screen coordinates
+            screen_x = int(x_index * screen_width)
+            screen_y = int(y_index * screen_height)
+
+            # Optional smoothing
+            if last_position is None:
+                last_position = (screen_x, screen_y)
+            else:
+                smoothing = 0.2
+                last_x = int((1 - smoothing) * last_position[0] + smoothing * screen_x)
+                last_y = int((1 - smoothing) * last_position[1] + smoothing * screen_y)
+                last_position = (last_x, last_y)
+                screen_x, screen_y = last_x, last_y
+
+            # Move the mouse
+            pyautogui.moveTo(screen_x, screen_y, duration=0.01)
+
+            # Detect "pinch" (left mouse click)
+            x1 = int(index_tip.x * frame_width)
+            y1 = int(index_tip.y * frame_height)
+            x2 = int(thumb_tip.x * frame_width)
+            y2 = int(thumb_tip.y * frame_height)
+            distance = euclidean_distance(x1, y1, x2, y2)
+
+            if distance < 30:
+                current_time = time.time()
+                if current_time - last_click_time > click_cooldown:
+                    pyautogui.click()
+                    last_click_time = current_time
+                    #print("Left click!")
+
+            # Visual feedback
+            cv2.circle(frame, (int(x_index * frame_width), int(y_index * frame_height)), 10, (0, 0, 255), -1)
 
         # Draw hand landmarks
         image_height, image_width, _ = frame.shape
