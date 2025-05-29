@@ -1,5 +1,5 @@
 #----------------------------------------------------------#
-# Name: Custom Gesture Recognition Algorithm
+# Name: Custom Gesture Recognition
 # Purpose: To create a custom gesture recognition algorithm
 #          to control a PC without mouse & keyboard.
 # Author: Ashley Beebakee (https://github.com/OmniAshley)
