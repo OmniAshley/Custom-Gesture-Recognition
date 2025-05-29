@@ -1,5 +1,5 @@
 #----------------------------------------------------------#
-# Name: Gesture Recognition Algorithm (Custom)
+# Name: Custom Gesture Recognition Algorithm
 # Purpose: To create a custom gesture recognition algorithm
 #          to control a PC without mouse & keyboard.
 # Author: Ashley Beebakee (https://github.com/OmniAshley)
@@ -70,8 +70,16 @@ options = GestureRecognizerOptions(
     min_tracking_confidence = 0.5,
     result_callback=print_result)
 
-# Start capturing video from the webcam
-cap = cv2.VideoCapture(0)
+# Start capturing video from the webcam with custom resolution
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+# Warm-up frames to stabilise webcam
+for _ in range(5):
+    cap.read()
+    time.sleep(0.1)
+
 if not cap.isOpened():
     print("Error: Cannot open camera.")
     exit()
