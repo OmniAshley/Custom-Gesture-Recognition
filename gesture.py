@@ -4,7 +4,7 @@
 #          to control a PC without mouse & keyboard.
 # Author: Ashley Beebakee (https://github.com/OmniAshley)
 # Date Created: 17/05/2025
-# Last Updated: 29/05/2025
+# Last Updated: 30/05/2025
 # Python Version: 3.10.6
 #----------------------------------------------------------#
 
@@ -89,7 +89,7 @@ options = GestureRecognizerOptions(
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-#cap.set(cv2.CAP_PROP_FPS, 60)
+cap.set(cv2.CAP_PROP_FPS, 50) # FPS can be modified based on webcam's frequency (Hz)
 
 # Gets webcam resolution
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
